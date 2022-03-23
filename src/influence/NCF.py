@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use('agg')
 import os.path
 import time
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import math
 from scipy.optimize import fmin_ncg
 
@@ -136,7 +136,7 @@ class NCF(GenericNeuralNet):
         with tf.variable_scope('h1'):
             h1_o = tf.nn.relu(self.fnn_layer(hidden_input_mlp, self.embedding_size), 'hidden_output')
         with tf.variable_scope('h2'):
-            h2_o = tf.nn.relu(self.fnn_layer(h1_o, self.embedding_size / 2), 'hidden_output')
+            h2_o = tf.nn.relu(self.fnn_layer(h1_o, int(self.embedding_size / 2)), 'hidden_output')
             h2_concat = tf.concat([h2_o, h_gmf], axis=1, name='hidden_concat')
         with tf.variable_scope('h3'):
             rating = tf.squeeze(self.fnn_layer(h2_concat, 1), name='rating')

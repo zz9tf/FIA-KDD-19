@@ -1,6 +1,5 @@
 import numpy as np
 
-from tensorflow.contrib.learn.python.learn.datasets import base
 from influence.dataset import DataSet
 
 
@@ -21,7 +20,7 @@ def load_yelp(train_dir):
   validation = DataSet(valid_input, valid_output)
   test = DataSet(test_input, test_output)
 
-  return base.Datasets(train=train, validation=validation, test=test)
+  return {"train": train, "validation": validation, "test": test}
 
 
   

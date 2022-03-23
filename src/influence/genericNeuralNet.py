@@ -18,14 +18,14 @@ from scipy.optimize import fmin_ncg
 import os.path
 import time
 from six.moves import xrange  # pylint: disable=redefined-builtin
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.python.ops import array_ops
 # from keras import backend as K
-from tensorflow.contrib.learn.python.learn.datasets import base
 
 from influence.hessians import hessian_vector_product
 from influence.dataset import DataSet
 
+tf.disable_v2_behavior()
 
 def variable(name, shape, initializer):
     dtype = tf.float32
@@ -114,8 +114,8 @@ class GenericNeuralNet(object):
                 
         # Setup input
         self.input_placeholder, self.labels_placeholder = self.placeholder_inputs()
-        self.num_train_examples = self.data_sets.train.labels.shape[0]
-        self.num_test_examples = self.data_sets.test.labels.shape[0]
+        self.num_train_examples = self.data_sets["train"].labels.shape[0]
+        self.num_test_examples = self.data_sets["test"].labels.shape[0]
         
         # Setup inference and training
         if self.keep_probs is not None:
@@ -167,8 +167,8 @@ class GenericNeuralNet(object):
     
         self.checkpoint_file = os.path.join(self.train_dir, "%s-checkpoint" % self.model_name)
 
-        self.all_train_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets.train)
-        self.all_test_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets.test)
+        self.all_train_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets["train"])
+        self.all_test_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets["test"])
 
         init = tf.global_variables_initializer()        
         self.sess.run(init)
@@ -201,7 +201,7 @@ class GenericNeuralNet(object):
 
 
     def reset_datasets(self):
-        for data_set in self.data_sets:
+        for data_set in self.data_sets.values():
             if data_set is not None:
                 data_set.reset_batch()
 
@@ -282,6 +282,8 @@ class GenericNeuralNet(object):
 
         ret = []
         for i in xrange(num_iter):
+            if i == 3:
+                print()
             feed_dict = self.fill_feed_dict_with_batch(data_set)
             ret_temp = self.sess.run(ops, feed_dict=feed_dict)
             
@@ -307,14 +309,14 @@ class GenericNeuralNet(object):
         if self.mini_batch == True:
             grad_loss_val, loss_no_reg_val, loss_val, train_acc_val = self.minibatch_mean_eval(
                 [self.grad_total_loss_op, self.loss_no_reg, self.total_loss, self.accuracy_op],
-                self.data_sets.train)
+                self.data_sets["train"])
             
             test_loss_val, test_acc_val = self.minibatch_mean_eval(
                 [self.loss_no_reg, self.accuracy_op],
-                self.data_sets.test)
+                self.data_sets["test"])
 
             test_feed_dict = self.fill_feed_dict_with_one_ex(
-                self.data_sets.test,
+                self.data_sets["test"],
                 test_idx)
             test_loss_val_test= self.sess.run(self.loss_no_reg, feed_dict=test_feed_dict)
 
@@ -386,7 +388,7 @@ class GenericNeuralNet(object):
             start_time = time.time()
 
             if step < iter_to_switch_to_batch:                
-                feed_dict = self.fill_feed_dict_with_batch(self.data_sets.train)
+                feed_dict = self.fill_feed_dict_with_batch(self.data_sets["train"])
                 _, loss_val = sess.run([self.train_op, self.total_loss], feed_dict=feed_dict)
                 
             elif step < iter_to_switch_to_sgd:
@@ -525,7 +527,7 @@ class GenericNeuralNet(object):
 
             for j in range(recursion_depth):
 
-                feed_dict = self.fill_feed_dict_with_batch(self.data_sets.train, batch_size=batch_size)
+                feed_dict = self.fill_feed_dict_with_batch(self.data_sets["train"], batch_size=batch_size)
 
                 feed_dict = self.update_feed_dict_with_v_placeholder(feed_dict, cur_estimate)
                 hessian_vector_val = self.sess.run(self.hessian_vector, feed_dict=feed_dict)
@@ -560,7 +562,7 @@ class GenericNeuralNet(object):
         self.reset_datasets()
         hessian_vector_val = None
         for i in xrange(num_iter):
-            feed_dict = self.fill_feed_dict_with_batch(self.data_sets.train, batch_size=0)
+            feed_dict = self.fill_feed_dict_with_batch(self.data_sets["train"], batch_size=0)
             # Can optimize this
             feed_dict = self.update_feed_dict_with_v_placeholder(feed_dict, v)
             hessian_vector_val_temp = self.sess.run(self.hessian_vector, feed_dict=feed_dict)
@@ -631,7 +633,7 @@ class GenericNeuralNet(object):
             v = self.vec_to_list(x)
             idx_to_remove = 5
 
-            single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets.train, idx_to_remove)      
+            single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets["train"], idx_to_remove)
             train_grad_loss_val = self.sess.run(self.grad_total_loss_op, feed_dict=single_train_feed_dict)
             predicted_loss_diff = np.dot(np.concatenate(v), np.concatenate(train_grad_loss_val)) / self.num_train_examples
 
@@ -682,7 +684,7 @@ class GenericNeuralNet(object):
                 start = i * batch_size
                 end = int(min((i+1) * batch_size, len(test_indices)))
 
-                test_feed_dict = self.fill_feed_dict_with_some_ex(self.data_sets.test, test_indices[start:end])
+                test_feed_dict = self.fill_feed_dict_with_some_ex(self.data_sets["test"], test_indices[start:end])
 
                 temp = self.sess.run(op, feed_dict=test_feed_dict)
 
@@ -694,7 +696,7 @@ class GenericNeuralNet(object):
             test_grad_loss_no_reg_val = [a/len(test_indices) for a in test_grad_loss_no_reg_val]
 
         else:
-            test_grad_loss_no_reg_val = self.minibatch_mean_eval([op], self.data_sets.test)[0]
+            test_grad_loss_no_reg_val = self.minibatch_mean_eval([op], self.data_sets["test"])[0]
         
         return test_grad_loss_no_reg_val
 
@@ -754,7 +756,7 @@ class GenericNeuralNet(object):
         #     num_to_remove = len(train_idx)
         #     predicted_loss_diffs = np.zeros([num_to_remove])
         #     for counter, idx_to_remove in enumerate(train_idx):
-        #         single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets.train, idx_to_remove)
+        #         single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets["train"], idx_to_remove)
         #         train_grad_loss_val = self.sess.run(self.grad_total_loss_op, feed_dict=single_train_feed_dict)
         #         predicted_loss_diffs[counter] = np.dot(np.concatenate(inverse_hvp), np.concatenate(train_grad_loss_val)) / self.num_train_examples
         #
@@ -770,7 +772,7 @@ class GenericNeuralNet(object):
 
         # Setup        
         print_iterations = num_iter / num_prints
-        feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets.train, 0)
+        feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets["train"], 0)
 
         # Initialize starting vector
         grad_loss_val = self.sess.run(self.grad_total_loss_op, feed_dict=feed_dict)
@@ -852,7 +854,7 @@ class GenericNeuralNet(object):
         for counter, train_idx in enumerate(train_indices):
             # Put in the train example in the feed dict
             grad_influence_feed_dict = self.fill_feed_dict_with_one_ex(
-                self.data_sets.train,  
+                self.data_sets["train"],
                 train_idx)
 
             self.update_feed_dict_with_v_placeholder(grad_influence_feed_dict, inverse_hvp)
@@ -869,25 +871,25 @@ class GenericNeuralNet(object):
 
 
     def update_train_x(self, new_train_x):
-        assert np.all(new_train_x.shape == self.data_sets.train.x.shape)
-        new_train = DataSet(new_train_x, np.copy(self.data_sets.train.labels))
-        self.data_sets = base.Datasets(train=new_train, validation=self.data_sets.validation, test=self.data_sets.test)
-        self.all_train_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets.train)                
+        assert np.all(new_train_x.shape == self.data_sets["train"].x.shape)
+        new_train = DataSet(new_train_x, np.copy(self.data_sets["train"].labels))
+        self.data_sets["train"] = new_train
+        self.all_train_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets["train"])
         self.reset_datasets()
 
 
     def update_train_x_y(self, new_train_x, new_train_y):
         new_train = DataSet(new_train_x, new_train_y)
-        self.data_sets = base.Datasets(train=new_train, validation=self.data_sets.validation, test=self.data_sets.test)
-        self.all_train_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets.train)                
+        self.data_sets["train"] = new_train
+        self.all_train_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets["train"])
         self.num_train_examples = len(new_train_y)
         self.reset_datasets()        
 
 
     def update_test_x_y(self, new_test_x, new_test_y):
         new_test = DataSet(new_test_x, new_test_y)
-        self.data_sets = base.Datasets(train=self.data_sets.train, validation=self.data_sets.validation, test=new_test)
-        self.all_test_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets.test)                
+        self.data_sets["test"] = new_test
+        self.all_test_feed_dict = self.fill_feed_dict_with_all_ex(self.data_sets["test"])
         self.num_test_examples = len(new_test_y)
         self.reset_datasets()        
 
