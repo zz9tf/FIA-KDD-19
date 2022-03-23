@@ -47,21 +47,24 @@ class DataSet(object):
         self._labels_batch = np.copy(self._labels)
 
     def next_batch(self, batch_size):
-        assert batch_size <= self._num_examples
+        # assert batch_size <= self._num_examples
 
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
         if self._index_in_epoch > self._num_examples:
+            if self._index_in_epoch < self._num_examples + batch_size:
+                self._index_in_epoch = self._num_examples
+            else:
 
-            # Shuffle the data
-            perm = np.arange(self._num_examples)
-            np.random.shuffle(perm)
-            self._x_batch = self._x_batch[perm, :]
-            self._labels_batch = self._labels_batch[perm]
+                # Shuffle the data
+                perm = np.arange(self._num_examples)
+                np.random.shuffle(perm)
+                self._x_batch = self._x_batch[perm, :]
+                self._labels_batch = self._labels_batch[perm]
 
-            # Start next epoch
-            start = 0
-            self._index_in_epoch = batch_size
+                # Start next epoch
+                start = 0
+                self._index_in_epoch = batch_size
 
         end = self._index_in_epoch
         return self._x_batch[start:end], self._labels_batch[start:end]

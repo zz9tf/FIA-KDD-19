@@ -4,12 +4,12 @@ import os
 def record_time_cost(model, test_idx, iter_to_load, force_refresh=False, random_seed=17):
     np.random.seed(random_seed)
     model.load_checkpoint(iter_to_load)
-    y_test = model.data_sets.test.labels[test_idx]
+    y_test = model.data_sets["test"].labels[test_idx]
     print('Test label: %s' % y_test)
     approx_params = {'batch_size': model.batch_size, "damping": model.damping}
     model.get_influence_on_test_loss(
         [test_idx],
-        np.arange(len(model.data_sets.train.labels)),
+        np.arange(len(model.data_sets["train"].labels)),
         force_refresh=force_refresh,
         approx_params=approx_params)
     return 0
@@ -22,7 +22,7 @@ def test_retraining(model, test_idx, iter_to_load, retrain_times, force_refresh=
     model.load_checkpoint(iter_to_load)
     sess = model.sess
 
-    y_test = model.data_sets.test.labels[test_idx]
+    y_test = model.data_sets["test"].labels[test_idx]
     print('Test label: %s' % y_test)
 
     ## Or, randomly remove training examples
@@ -37,12 +37,12 @@ def test_retraining(model, test_idx, iter_to_load, retrain_times, force_refresh=
         approx_params = {'batch_size': model.batch_size, "damping": model.damping}
         predicted_y_diffs = model.get_influence_on_test_loss(
             [test_idx],
-            np.arange(len(model.data_sets.train.labels)),
+            np.arange(len(model.data_sets["train"].labels)),
             force_refresh=force_refresh,
             approx_params=approx_params)
         np.save("output/%s-[%s]-_total_y_diffs" % (model.model_name, test_idx), predicted_y_diffs)
         print("predicted differences are saved for test point %d: %s,%s" % (
-            test_idx, model.data_sets.test._x[test_idx], model.data_sets.test._labels[test_idx],))
+            test_idx, model.data_sets["test"]._x[test_idx], model.data_sets["test"]._labels[test_idx],))
         indices_to_remove = np.argsort(np.abs(predicted_y_diffs))[-num_to_remove:]
         indices_to_remove = indices_to_remove[::-1]
         predicted_y_diffs = predicted_y_diffs[indices_to_remove]
@@ -54,7 +54,7 @@ def test_retraining(model, test_idx, iter_to_load, retrain_times, force_refresh=
 
     # Sanity check
     test_feed_dict = model.fill_feed_dict_with_one_ex(
-        model.data_sets.test,
+        model.data_sets["test"],
         test_idx)
     test_y_val, params_val = sess.run([model.logits, model.params], feed_dict=test_feed_dict)
     print("Prediction for the test case is:")
@@ -113,9 +113,9 @@ def test_retraining(model, test_idx, iter_to_load, retrain_times, force_refresh=
         print(
             'Retraining without train_idx %s (label %s):' % (
                 model.train_indices_of_test_case[idx_to_remove],
-                model.data_sets.train.labels[model.train_indices_of_test_case[idx_to_remove]]))
+                model.data_sets["train"].labels[model.train_indices_of_test_case[idx_to_remove]]))
 
-        train_feed_dict = model.fill_feed_dict_with_all_but_one_ex(model.data_sets.train,
+        train_feed_dict = model.fill_feed_dict_with_all_but_one_ex(model.data_sets["train"],
                                                                    model.train_indices_of_test_case[idx_to_remove])
 
         retrained_test_y_val, retrained_params_val = [], []

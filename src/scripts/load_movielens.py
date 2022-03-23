@@ -11,12 +11,12 @@ def load_movielens(train_dir, validation_size=5000):
 
   train_input = train[:975460,:2].astype(np.int32)
   train_output = train[:975460,2]
-  valid_input = valid[:, :2].astype(np.int32)
-  valid_output = valid[:, 2]
-  # test_input = test[:-1, :2].astype(np.int32)
-  # test_output = test[:-1, 2]
-  test_input = test[:, :2].astype(np.int32)
-  test_output = test[:, 2]
+  valid_input = valid[:-6, :2].astype(np.int32)
+  valid_output = valid[:-6, 2]
+  test_input = test[:-6, :2].astype(np.int32)
+  test_output = test[:-6, 2]
+  # test_input = test[:, :2].astype(np.int32)
+  # test_output = test[:, 2]
 
   train = DataSet(train_input, train_output)
   validation = DataSet(valid_input, valid_output)

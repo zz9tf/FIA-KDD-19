@@ -18,6 +18,7 @@ from scipy.optimize import fmin_ncg
 import os.path
 import time
 from six.moves import xrange  # pylint: disable=redefined-builtin
+import tensorflow
 import tensorflow.compat.v1 as tf
 from tensorflow.python.ops import array_ops
 # from keras import backend as K
@@ -141,7 +142,7 @@ class GenericNeuralNet(object):
         self.train_op, self.reset_optimizer_op = self.get_train_op(self.total_loss, self.global_step, self.learning_rate)
         self.train_sgd_op = self.get_train_sgd_op(self.total_loss, self.global_step, self.learning_rate*10)
         # self.train_op=self.train_sgd_op
-        self.accuracy_op = self.get_accuracy_op(self.logits, self.labels_placeholder)        
+        self.accuracy_op = self.get_accuracy_op(self.logits, self.labels_placeholder)
         self.preds = self.predictions(self.logits)
 
         # Setup misc
@@ -275,15 +276,13 @@ class GenericNeuralNet(object):
 
         num_examples = data_set.num_examples
         print (f'num_examples: {num_examples}, batch_size:{self.batch_size}')
-        assert num_examples % self.batch_size == 0
+        # assert num_examples % self.batch_size == 0
         num_iter = int(num_examples / self.batch_size)
 
         self.reset_datasets()
 
         ret = []
         for i in xrange(num_iter):
-            if i == 3:
-                print()
             feed_dict = self.fill_feed_dict_with_batch(data_set)
             ret_temp = self.sess.run(ops, feed_dict=feed_dict)
             
@@ -307,6 +306,7 @@ class GenericNeuralNet(object):
         # params_val = self.sess.run(self.params)
         test_idx = 999
         if self.mini_batch == True:
+            print()
             grad_loss_val, loss_no_reg_val, loss_val, train_acc_val = self.minibatch_mean_eval(
                 [self.grad_total_loss_op, self.loss_no_reg, self.total_loss, self.accuracy_op],
                 self.data_sets["train"])
