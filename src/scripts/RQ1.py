@@ -16,17 +16,17 @@ from influence.matrix_factorization import MF
 from influence.NCF import NCF
 
 configs = {
-    "avextol": 1e-3,  # thresholdforoptimizationininfluencefunction
-    "damping": 1e-6,  # dampingtermininfluencefunction
-    "weight_decay": 1e-3,  # l2regularizationtermfortrainingMForNCFmodel
-    "lr": 1e-3,  # initiallearningratefortrainingMForNCFmodel
-    "embed_size": 16,  # embeddingsize
-    "maxinf": 1,  # removetypeoftrainindices
-    "dataset": "movielens",  # nameofdataset:movielensoryelp
-    "model": "NCF",  # modeltype:MForNCF
-    "num_test": 5,  # numberoftestpointsofretraining"
-    "num_steps_train": 180000,  # trainingsteps
-    "num_steps_retrain": 27000,  # retrainingsteps
+    "avextol": 1e-3,  # threshold for optimization in influence function
+    "damping": 1e-6,  # damping term in influence function
+    "weight_decay": 1e-3,  # l2 regularization term for training MF or NCF model
+    "lr": 1e-3,  # initial learning rate for training MF or NCF model
+    "embed_size": 16,  # embedding size
+    "maxinf": 1,  # remove type of train indices
+    "dataset": "movielens",  # name of dataset: movielens or yelp
+    "model": "MF",  # modeltype:MF or NCF
+    "num_test": 5,  # number of test points of retraining"
+    "num_steps_train": 180000,  # training steps
+    "num_steps_retrain": 27000,  # retraining steps
     "reset_adam": 0,
     "load_checkpoint": 1,
     "retrain_times": 4,
@@ -112,15 +112,16 @@ print(f'Model name is: {model.model_name}')
 
 num_steps = configs['num_steps_train']
 iter_to_load = num_steps - 1
-if os.path.isfile("%s-%s.index" % (model.checkpoint_file, iter_to_load)):
-    print('Checkpoint found, loading...')
-    model.load_checkpoint(iter_to_load=iter_to_load)
-else:
-    print('Checkpoint not found, start training...')
-    model.train(
-        num_steps=num_steps)
-    model.saver.save(model.sess, model.checkpoint_file, global_step=num_steps - 1)
+# if os.path.isfile("%s-%s.index" % (model.checkpoint_file, iter_to_load)):
+#     print('Checkpoint found, loading...')
+#     model.load_checkpoint(iter_to_load=iter_to_load)
+# else:
+#     print('Checkpoint not found, start training...')
+#     model.train(
+#         num_steps=num_steps)
+#     model.saver.save(model.sess, model.checkpoint_file, global_step=num_steps - 1)
 
+model.train(num_steps=num_steps, load_checkpoints=iter_to_load)
 if configs['maxinf']:
     remove_type = 'maxinf'
 else:
@@ -138,7 +139,6 @@ if configs['sort_test_case']:
 actual_y_diff = np.zeros(num_test)
 predicted_y_diff = np.zeros(num_test)
 removed_indices = np.zeros(num_test)
-
 for i, test_idx in enumerate(test_indices):
     print(f'test point====={i}=====')
     actual_y_diffs, predicted_y_diffs, indices_to_remove = experiments.test_retraining(

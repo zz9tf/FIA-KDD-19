@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import unicode_literals
@@ -7,7 +8,7 @@ import matplotlib
 matplotlib.use('agg')
 import os.path
 import time
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import math
 from scipy.optimize import fmin_ncg
 
@@ -36,7 +37,7 @@ class MF(GenericNeuralNet):
 
     def get_test_params(self, test_index):
         test_params = []
-        test_u, test_i = self.data_sets.test.x[test_index[0]]
+        test_u, test_i = self.data_sets["test"].x[test_index[0]]
         test_u, test_i = int(test_u), int(test_i)
         print('Test user: %s item: %s' % (test_u, test_i))
         for layer in ['embedding_layer']:
@@ -148,7 +149,7 @@ class MF(GenericNeuralNet):
 
         return None, None  # , indiv_wrong_prob
 
-    def get_test_grad(self, grad_total_loss_op):
+    def  get_test_grad(self, grad_total_loss_op):
         test_grad = []
         test_grad.append(
             grad_total_loss_op[0][self.test_u * self.embedding_size:(1 + self.test_u) * self.embedding_size])
@@ -237,7 +238,7 @@ class MF(GenericNeuralNet):
             num_to_remove = len(self.train_indices_of_test_case)
             predicted_loss_diffs = np.zeros([num_to_remove])
             for counter, idx_to_remove in enumerate(self.train_indices_of_test_case):
-                single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets.train, idx_to_remove)
+                single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets["train"], idx_to_remove)
                 train_grad_loss_val = self.sess.run(self.grad_total_loss_op_test, feed_dict=single_train_feed_dict)
                 # train_grad_loss_val = self.sess.run(self.grad_loss_r_test, feed_dict=single_train_feed_dict)
                 predicted_loss_diffs[counter] = np.dot(np.concatenate(inverse_hvp),
@@ -267,7 +268,7 @@ class MF(GenericNeuralNet):
                 start = i * batch_size
                 end = int(min((i + 1) * batch_size, len(test_indices)))
 
-                test_feed_dict = self.fill_feed_dict_with_some_ex(self.data_sets.test, test_indices[start:end])
+                test_feed_dict = self.fill_feed_dict_with_some_ex(self.data_sets["test"], test_indices[start:end])
 
                 temp = self.sess.run(op, feed_dict=test_feed_dict)
 
@@ -280,7 +281,7 @@ class MF(GenericNeuralNet):
             test_grad_loss_no_reg_val = [a / len(test_indices) for a in test_grad_loss_no_reg_val]
 
         else:
-            test_grad_loss_no_reg_val = self.minibatch_mean_eval([op], self.data_sets.test)[0]
+            test_grad_loss_no_reg_val = self.minibatch_mean_eval([op], self.data_sets["test"])[0]
 
         return test_grad_loss_no_reg_val
 
@@ -290,8 +291,8 @@ class MF(GenericNeuralNet):
         self.reset_datasets()
         hessian_vector_val = None
         for i in range(num_iter):
-            # feed_dict = self.fill_feed_dict_with_batch(self.data_sets.train, batch_size=None)
-            feed_dict = self.fill_feed_dict_with_some_ex(self.data_sets.train, self.train_indices_of_test_case.tolist())
+            # feed_dict = self.fill_feed_dict_with_batch(self.data_sets["train"], batch_size=None)
+            feed_dict = self.fill_feed_dict_with_some_ex(self.data_sets["train"], self.train_indices_of_test_case.tolist())
             # Can optimize this
             feed_dict = self.update_feed_dict_with_v_placeholder_test(feed_dict, v)
             hessian_vector_val_temp = self.sess.run(self.hessian_vector_test, feed_dict=feed_dict)
@@ -314,10 +315,10 @@ class MF(GenericNeuralNet):
     def get_train_indices_of_test_case(self, test_indices):
         assert len(test_indices) == 1
         test_index = test_indices[0]
-        test_u, test_i = self.data_sets.test.x[test_index]
+        test_u, test_i = self.data_sets["test"].x[test_index]
         self.test_u, self.test_i = int(test_u), int(test_i)
-        u_indices = np.where(self.data_sets.train.x[:, 0] == self.test_u)[0]
-        i_indices = np.where(self.data_sets.train.x[:, 1] == self.test_i)[0]
+        u_indices = np.where(self.data_sets["train"].x[:, 0] == self.test_u)[0]
+        i_indices = np.where(self.data_sets["train"].x[:, 1] == self.test_i)[0]
         return np.concatenate((u_indices, i_indices))
 
     def hessian_vector_product_test(self, ys, xs, v):
@@ -402,7 +403,7 @@ class MF(GenericNeuralNet):
             v = self.vec_to_list_test(x)
             idx_to_remove = 5
 
-            single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets.train, idx_to_remove)
+            single_train_feed_dict = self.fill_feed_dict_with_one_ex(self.data_sets["train"], idx_to_remove)
             train_grad_loss_val = self.sess.run(self.grad_total_loss_op_test, feed_dict=single_train_feed_dict)
             predicted_loss_diff = np.dot(np.concatenate(v),
                                          np.concatenate(train_grad_loss_val)) / self.train_indices_of_test_case.shape[0]

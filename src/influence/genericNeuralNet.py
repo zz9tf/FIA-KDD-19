@@ -285,7 +285,7 @@ class GenericNeuralNet(object):
         for i in xrange(num_iter):
             feed_dict = self.fill_feed_dict_with_batch(data_set)
             ret_temp = self.sess.run(ops, feed_dict=feed_dict)
-            
+
             if len(ret)==0:
                 for b in ret_temp:
                     if isinstance(b, list):
@@ -298,7 +298,6 @@ class GenericNeuralNet(object):
                         ret[counter] = [a + (c / float(num_iter)) for (a, c) in zip(ret[counter], b)]
                     else:
                         ret[counter] += (b / float(num_iter))
-            
         return ret
 
 
@@ -306,11 +305,11 @@ class GenericNeuralNet(object):
         # params_val = self.sess.run(self.params)
         test_idx = 999
         if self.mini_batch == True:
-            print()
+
             grad_loss_val, loss_no_reg_val, loss_val, train_acc_val = self.minibatch_mean_eval(
                 [self.grad_total_loss_op, self.loss_no_reg, self.total_loss, self.accuracy_op],
                 self.data_sets["train"])
-            
+
             test_loss_val, test_acc_val = self.minibatch_mean_eval(
                 [self.loss_no_reg, self.accuracy_op],
                 self.data_sets["test"])
@@ -373,7 +372,7 @@ class GenericNeuralNet(object):
         """
         Trains a model for a specified number of steps.
         """
-        if verbose: print('Training for %s steps' % num_steps)
+        if verbose: print('Training for %s step s' % num_steps)
 
         sess = self.sess
 
@@ -384,23 +383,21 @@ class GenericNeuralNet(object):
 
         for step in xrange(load_checkpoints+1, num_steps):
             # self.update_learning_rate(step)
-
             start_time = time.time()
 
             if step < iter_to_switch_to_batch:                
                 feed_dict = self.fill_feed_dict_with_batch(self.data_sets["train"])
                 _, loss_val = sess.run([self.train_op, self.total_loss], feed_dict=feed_dict)
-                
+
             elif step < iter_to_switch_to_sgd:
                 feed_dict = self.all_train_feed_dict          
                 _, loss_val = sess.run([self.train_op, self.total_loss], feed_dict=feed_dict)
 
             else: 
-                feed_dict = self.all_train_feed_dict          
-                _, loss_val = sess.run([self.train_sgd_op, self.total_loss], feed_dict=feed_dict)          
+                feed_dict = self.all_train_feed_dict
+                _, loss_val = sess.run([self.train_sgd_op, self.total_loss], feed_dict=feed_dict)
 
             duration = time.time() - start_time
-
             if verbose:
                 if step % 1000 == 0:
                     # Print status to stdout.
@@ -417,7 +414,7 @@ class GenericNeuralNet(object):
     def load_checkpoint(self, iter_to_load, do_checks=True):
         checkpoint_to_load = "%s-%s" % (self.checkpoint_file, iter_to_load) 
         self.saver.restore(self.sess, checkpoint_to_load)
-
+        print("Loading successful...")
         if do_checks:
             print('Model %s loaded. Sanity checks ---' % checkpoint_to_load)
             self.print_model_eval()

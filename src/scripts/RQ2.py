@@ -3,7 +3,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import unicode_literals
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import sys
 import argparse
 import os
@@ -16,24 +16,31 @@ from scripts.load_movielens import load_movielens
 from scripts.load_yelp import load_yelp
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Run RQ2 training.")
-    parser.add_argument('--avextol', type=float, default=1e-3,
-                        help='threshold for optimization')
-    parser.add_argument('--damping', type=float, default=1e-6,
-                        help='damping term')
-    parser.add_argument('--embed_size', type=int, default=16,
-                        help='embedding size')
-    parser.add_argument('--maxinf', type=int, default=1,
-                        help='remove type of train indices')
-    return parser.parse_args()
+
+configs = {
+    "avextol": 1e-3,
+    "damping": 1e-6,
+    "embed_size": 16,
+    "maxinf": 1
+}
+
+# def parse_args():
+#     parser = argparse.ArgumentParser(description="Run RQ2 training.")
+#     parser.add_argument('--avextol', type=float, default=1e-3,
+#                         help='threshold for optimization')
+#     parser.add_argument('--damping', type=float, default=1e-6,
+#                         help='damping term')
+#     parser.add_argument('--embed_size', type=int, default=16,
+#                         help='embedding size')
+#     parser.add_argument('--maxinf', type=int, default=1,
+#                         help='remove type of train indices')
+#     return parser.parse_args()
 
 
-args = parse_args()
 data_sets_movielens = load_movielens('../../data')
 data_sets_yelp = load_yelp('../../data')
 
-embed_size = args.embed_size
+embed_size = configs["embed_size"]
 # embed_sizes = [args.embed_size]
 #
 # for embed_size in embed_sizes:
@@ -57,18 +64,17 @@ for data_sets in [data_sets_movielens, data_sets_yelp]:
             model_name = "NCF"
             num_steps = 120000
 
-        num_users = int(np.max(data_sets.train._x[:, 0])+1)
-        num_items = int(np.max(data_sets.train._x[:, 1])+1)
+        num_users = int(np.max(data_sets["train"]._x[:, 0])+1)
+        num_items = int(np.max(data_sets["train"]._x[:, 1])+1)
 
         weight_decay = 0.001
         initial_learning_rate = 0.001
         print("number of users: %d" % num_users)
         print("number of items: %d" % num_items)
-        print("number of training examples: %d" % data_sets.train._x.shape[0])
-        print("number of testing examples: %d" % data_sets.test._x.shape[0])
-        args = parse_args()
-        avextol = args.avextol
-        damping = args.damping
+        print("number of training examples: %d" % data_sets["train"]._x.shape[0])
+        print("number of testing examples: %d" % data_sets["test"]._x.shape[0])
+        avextol = configs["avextol"]
+        damping = configs["damping"]
         print("Using avextol of %.0e" % avextol)
         print("Using damping of %.0e" % damping)
         print("Using embedding size of %d" % embed_size)
@@ -90,7 +96,7 @@ for data_sets in [data_sets_movielens, data_sets_yelp]:
             avextol=avextol,
             model_name='%s_%s_explicit_damping%.0e_avextol%.0e_embed%d_maxinf%d_wd%.0e' % (data_name, model_name,
                                                                                            damping, avextol, embed_size,
-                                                                                           args.maxinf, weight_decay))
+                                                                                           configs["maxinf"], weight_decay))
         iter_to_load = num_steps - 1
         print("Model name is %s" % model.model_name)
         if os.path.isfile("%s-%s.index" % (model.checkpoint_file, iter_to_load)):
